@@ -1,0 +1,397 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum
+enum Gender {
+  MEN
+  WOMEN
+  KID
+  UNISEX
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  ALERT
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  QR
+  CASH
+  LIBELULA
+  CARD
+}
+
+enum DocumentType {
+  CI
+  NIT
+}
+
+enum MovementType {
+  IN
+  OUT
+}
+
+model User {
+  id        String   @id @default(uuid())
+  firstName String   @map("first_name") @db.VarChar(100)
+  lastName  String   @map("last_name") @db.VarChar(100)
+  email     String   @unique @db.VarChar(255)
+  password  String   @db.VarChar(255)
+  isActive  Boolean  @default(true) @map("is_active")
+  image     String?  @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+  // relaciones
+  Shop      Shop?    @relation(fields: [shopId], references: [id])
+  shopId    String?  @map("shop_id")
+
+  roles         UserRole[]
+  addresses     UserAddress[]
+  orders        Order[]
+  notifications Notification[]
+
+  // relación de empleados registrando historial de orden
+  OrderHistory OrderHistory[]
+
+  @@map("users")
+}
+
+model Role {
+  id    String     @id @db.VarChar(50)
+  name  String     @unique @db.VarChar(50)
+  users UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  userId String @map("user_id")
+  roleId String @map("role_id")
+  User   User   @relation(fields: [userId], references: [id])
+  Role   Role   @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model UserAddress {
+  id        String  @id @default(uuid())
+  firstName String  @map("first_name") @db.VarChar(100)
+  lastName  String  @map("last_name") @db.VarChar(100)
+  ci        String  @db.VarChar(20)
+  phone     String  @db.VarChar(20)
+  address   String
+  reference String?
+  isDefault Boolean @default(false) @map("is_default")
+
+  // relaciones
+  User   User   @relation(fields: [userId], references: [id])
+  userId String @map("user_id")
+  City   City   @relation(fields: [cityId], references: [id])
+  cityId String @map("city_id")
+
+  @@map("user_addresses")
+}
+
+model Department {
+  id        String     @id @default(uuid())
+  name      String     @unique @db.VarChar(100)
+  provinces Province[]
+
+  @@map("departments")
+}
+
+model Province {
+  id           String     @id @default(uuid())
+  name         String     @db.VarChar(100)
+  Department   Department @relation(fields: [departmentId], references: [id])
+  departmentId String     @map("department_id")
+  cities       City[]
+
+  @@map("provinces")
+}
+
+model City {
+  id         String   @id @default(uuid())
+  name       String   @db.VarChar(100)
+  Province   Province @relation(fields: [provinceId], references: [id])
+  provinceId String   @map("province_id")
+
+  // relaciones
+  UserAddress  UserAddress[]
+  OrderAddress OrderAddress[]
+  shops        Shop[]
+
+  @@map("cities")
+}
+
+model Category {
+  id   String @id @default(uuid())
+  name String @unique @db.VarChar(100)
+  slug String @unique @db.VarChar(100)
+
+  // relaciones
+
+  parentCategory Category?  @relation("CategoryToCategory", fields: [parentId], references: [id])
+  parentId       String?    @map("parent_id")
+  subCategories  Category[] @relation("CategoryToCategory")
+
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id        String   @id @default(uuid())
+  title     String   @db.VarChar(255)
+  slug      String   @unique @db.VarChar(255)
+  gender    Gender
+  costPrice Float    @map("cost_price")
+  price     Float
+  salePrice Float?   @map("sale_price")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tags        String[] @default([])
+  description String?
+
+  // Relaciones
+  images   ProductImage[]
+  variants ProductVariant[]
+
+  Category   Category @relation(fields: [categoryId], references: [id])
+  categoryId String   @map("category_id")
+
+  @@index([categoryId])
+  @@index([gender])
+  @@map("products")
+}
+
+model ProductImage {
+  id  Int    @id @default(autoincrement())
+  url String @db.VarChar(255)
+  // relaciones
+
+  Product   Product @relation(fields: [productId], references: [id])
+  productId String  @map("product_id")
+
+  @@map("product_images")
+}
+
+model ProductVariant {
+  id         String   @id @default(uuid())
+  size       String   @db.VarChar(50)
+  color      String?  @db.VarChar(50)
+  stock      Int
+  stockAlert Int      @default(5) @map("stock_alert")
+  sku        String   @unique @db.VarChar(100)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // relaciones
+  Product   Product @relation(fields: [productId], references: [id])
+  productId String  @map("product_id")
+
+  OrderItem     OrderItem[]
+  StockMovement StockMovement[]
+
+  @@index([sku])
+  @@map("product_variants")
+}
+
+model StockMovement {
+  id               String         @id @default(uuid())
+  movementType     MovementType
+  quantity         Int
+  comment          String?
+  referenceId      String?        @map("reference_id")
+  movementAt       DateTime       @default(now()) @map("movement_at")
+  // relaciones
+  ProductVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+  productVariantId String         @map("product_variant_id")
+
+  @@index([productVariantId])
+  @@map("stock_movements")
+}
+
+model Order {
+  id            String        @id @default(uuid())
+  subTotal      Float         @map("sub_total")
+  totalTax      Float         @map("total_tax")
+  totalAmount   Float         @map("total_amount")
+  totalItems    Int           @map("total_items")
+  isPaid        Boolean       @default(false) @map("is_paid")
+  paidAt        DateTime?     @map("paid_at")
+  isOnlineSale  Boolean       @default(true) @map("is_online_sale")
+  status        OrderStatus   @default(PENDING)
+  paymentMethod PaymentMethod @map("payment_method")
+
+  transactionId String? @map("transaction_id") //Puede ser el id de Libelula
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // relaciones
+  User     User?   @relation(fields: [userId], references: [id])
+  userId   String? @map("user_id")
+  Coupon   Coupon? @relation(fields: [couponId], references: [id])
+  couponId String? @map("coupon_id")
+  Shop     Shop?   @relation(fields: [shopId], references: [id])
+  shopId   String? @map("shop_id")
+
+  OrderItem    OrderItem[]
+  OrderHistory OrderHistory[]
+
+  OrderAddress OrderAddress?
+
+  OrderInvoice OrderInvoice?
+
+  @@index([userId])
+  @@index([shopId])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id       String @id @default(uuid())
+  quantity Int
+  price    Float
+
+  // Relaciones
+  ProductVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+  productVariantId String         @map("product_variant_id")
+  Order            Order          @relation(fields: [orderId], references: [id])
+  orderId          String         @map("order_id")
+
+  @@index([productVariantId])
+  @@map("order_items")
+}
+
+model OrderAddress {
+  id        String  @id @default(uuid())
+  firstName String  @map("first_name") @db.VarChar(100)
+  lastName  String  @map("last_name") @db.VarChar(100)
+  email     String  @db.VarChar(255)
+  ci        String  @db.VarChar(20)
+  phone     String  @db.VarChar(20)
+  address   String
+  reference String?
+
+  // relaciones
+
+  City   City   @relation(fields: [cityId], references: [id])
+  cityId String @map("city_id")
+
+  Order   Order  @relation(fields: [orderId], references: [id])
+  orderId String @unique @map("order_id")
+
+  @@map("order_addresses")
+}
+
+model OrderInvoice {
+  id            String       @id @default(uuid())
+  documentType  DocumentType @map("document_type")
+  nitNumber     String?      @db.VarChar(15)
+  socialReason  String?      @map("social_reason") @db.VarChar(100)
+  invoiceNumber String?      @unique @map("invoice_number")
+  invoiceUrl    String?      @map("invoice_url")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relación 1:1
+  Order   Order  @relation(fields: [orderId], references: [id])
+  orderId String @unique @map("order_id")
+
+  @@map("order_invoices")
+}
+
+model OrderHistory {
+  id        String      @id @default(uuid())
+  status    OrderStatus
+  comment   String?
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  // relaciones
+  Order           Order   @relation(fields: [orderId], references: [id])
+  orderId         String  @map("order_id")
+  User            User?   @relation(fields: [changedByUserId], references: [id])
+  changedByUserId String? @map("changed_by_user_id")
+
+  @@index([orderId])
+  @@index([changedByUserId])
+  @@map("order_history")
+}
+
+model Coupon {
+  id           String       @id @default(uuid())
+  code         String       @unique @db.VarChar(50)
+  discountType DiscountType @map("discount_type")
+  value        Float
+  isActive     Boolean      @default(true) @map("is_active")
+  expiresAt    DateTime?    @map("expires_at")
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  orders Order[]
+
+  @@map("coupons")
+}
+
+model Shop {
+  id       String  @id @default(uuid())
+  name     String  @db.VarChar(100)
+  address  String
+  verified Boolean @default(false)
+
+  phone String? @db.VarChar(20)
+  email String? @db.VarChar(255)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  // relaciones
+  City      City     @relation(fields: [cityId], references: [id])
+  cityId    String   @map("city_id")
+
+  users  User[]
+  orders Order[]
+
+  @@map("shops")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  title     String           @db.VarChar(100)
+  message   String
+  type      NotificationType @default(INFO)
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  // relaciones
+  User   User   @relation(fields: [userId], references: [id])
+  userId String @map("user_id")
+
+  @@map("notifications")
+}

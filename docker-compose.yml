@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+  dunno-shop-db:
+    container_name: ${DB_NAME}
+    image: postgres:17.4
+    restart: always
+    ports:
+      - 5432:5432
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
