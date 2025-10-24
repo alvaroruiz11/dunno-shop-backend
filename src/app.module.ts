@@ -5,14 +5,18 @@ import { ProductsModule } from './products/products.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { CategoriesModule } from './categories/categories.module';
 import { FilesModule } from './files/files.module';
+import { OrdersModule } from './orders/orders.module';
+import { LocationsModule } from './locations/locations.module';
 
 @Module({
   imports: [
+    PrismaModule,
     SeedModule,
     AuthModule,
     CategoriesModule,
     FilesModule,
-    PrismaModule,
+    LocationsModule,
+    OrdersModule,
     ProductsModule,
   ],
   controllers: [],
