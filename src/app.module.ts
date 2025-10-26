@@ -7,6 +7,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { FilesModule } from './files/files.module';
 import { OrdersModule } from './orders/orders.module';
 import { LocationsModule } from './locations/locations.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { LocationsModule } from './locations/locations.module';
     LocationsModule,
     OrdersModule,
     ProductsModule,
+    UsersModule,
   ],
   controllers: [],
   providers: [],
