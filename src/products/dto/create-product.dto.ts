@@ -49,6 +49,11 @@ export class CreateProductDto {
   @IsOptional()
   images?: string[];
 
+  @IsString({ each: true })
+  @IsArray()
+  @IsOptional()
+  tags?: string[];
+
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })

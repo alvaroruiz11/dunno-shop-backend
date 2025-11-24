@@ -31,7 +31,7 @@ export class ProductsService {
           categoryId: data.categoryId,
           variants: {
             createMany: {
-              data: variants.map((item) => ({
+              data: variants.map(({ id, ...item }) => ({
                 size: item.size,
                 sku: item.sku,
                 stock: item.stock,
@@ -187,25 +187,22 @@ export class ProductsService {
   }
 
   async update(id: string, updateProductDto: UpdateProductDto) {
+    console.log(
+      '🚀 ~ ProductsService ~ update ~ updateProductDto:',
+      updateProductDto,
+    );
     await this.findOne(id);
 
-    const {
-      id: _,
-      images,
-      categoryId,
-      variants,
-      ...updateData
-    } = updateProductDto;
+    const { id: _, images, variants, ...updateData } = updateProductDto;
 
     try {
       const updateProduct = await this.prismaService.product.update({
         where: { id },
         data: {
           ...updateData,
-          categoryId: categoryId,
           ...(images &&
             images.length > 0 && {
-              product_images: {
+              images: {
                 deleteMany: {},
                 create: images.map((url) => ({ url })),
               },
@@ -213,16 +210,25 @@ export class ProductsService {
           ...(variants &&
             variants.length > 0 && {
               variants: {
-                deleteMany: {},
-                createMany: {
-                  data: variants.map((item) => ({
-                    size: item.size,
-                    sku: item.sku,
-                    stock: item.stock,
-                    stockAlert: item.stockAlert,
-                    color: item.color,
-                  })),
-                },
+                upsert: variants.map((variant) => ({
+                  where: {
+                    id: variant.id,
+                  },
+                  create: {
+                    size: variant.size,
+                    sku: variant.sku,
+                    stock: variant.stock,
+                    stockAlert: variant.stockAlert,
+                    color: variant.color,
+                  },
+                  update: {
+                    size: variant.size,
+                    sku: variant.sku,
+                    stock: variant.stock,
+                    stockAlert: variant.stockAlert,
+                    color: variant.color,
+                  },
+                })),
               },
             }),
         },

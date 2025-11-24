@@ -2,6 +2,10 @@ import { IsOptional, IsPositive, IsString, Matches } from 'class-validator';
 
 export class VariantProductDto {
   @IsString()
+  @IsOptional()
+  id?: string;
+
+  @IsString()
   size: string;
 
   @IsString()
