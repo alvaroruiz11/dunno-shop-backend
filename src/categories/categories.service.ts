@@ -20,15 +20,15 @@ export class CategoriesService {
     const [count, categories] = await Promise.all([
       this.prismaService.category.count(),
       this.prismaService.category.findMany({
-        where: {
-          parentId: null,
-        },
         skip: (page - 1) * limit,
         take: limit,
-        select: {
-          id: true,
-          name: true,
-          slug: true,
+        include: {
+          parentCategory: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
           subCategories: {
             select: {
               id: true,
@@ -48,7 +48,7 @@ export class CategoriesService {
         page: page,
         totalPages: totalPages,
       },
-      data: categories,
+      data: categories.map(({ parentId, ...rest }) => ({ ...rest })),
     };
   }
 

@@ -160,6 +160,7 @@ model Category {
   parentCategory Category?  @relation("CategoryToCategory", fields: [parentId], references: [id])
   parentId       String?    @map("parent_id")
   subCategories  Category[] @relation("CategoryToCategory")
+  isActive       Boolean    @default(true) @map("is_active")
 
   products Product[]
 
@@ -175,6 +176,7 @@ model Product {
   price     Float
   salePrice Float?   @map("sale_price")
   createdAt DateTime @default(now()) @map("created_at")
+  isActive  Boolean  @default(true) @map("is_active")
 
   tags        String[] @default([])
   description String?
@@ -203,13 +205,14 @@ model ProductImage {
 }
 
 model ProductVariant {
-  id         String   @id @default(uuid())
-  size       String   @db.VarChar(50)
-  color      String?  @db.VarChar(50)
-  stock      Int
-  stockAlert Int      @default(5) @map("stock_alert")
-  sku        String   @unique @db.VarChar(100)
-  createdAt  DateTime @default(now()) @map("created_at")
+  id          String   @id @default(uuid())
+  size        String   @db.VarChar(50)
+  color       String?  @db.VarChar(50)
+  stock       Int
+  stockAlert  Int      @default(5) @map("stock_alert")
+  sku         String   @unique @db.VarChar(100)
+  createdAt   DateTime @default(now()) @map("created_at")
+  isAvailable Boolean  @default(true) @map("is_available")
 
   // relaciones
   Product   Product @relation(fields: [productId], references: [id])
@@ -365,9 +368,9 @@ model Shop {
   name     String  @db.VarChar(100)
   address  String
   verified Boolean @default(false)
-
-  phone String? @db.VarChar(20)
-  email String? @db.VarChar(255)
+  isActive Boolean @default(true) @map("is_active")
+  phone    String? @db.VarChar(20)
+  email    String? @db.VarChar(255)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
