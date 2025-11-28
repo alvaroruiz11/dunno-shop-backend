@@ -7,7 +7,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { OrdersPaginationDto } from './dto/orders-pagination.dto';
-import { PaymentMethod } from 'generated/prisma';
+import { PaymentMethod, type User } from 'generated/prisma';
 
 @Injectable()
 export class OrdersService {
@@ -103,6 +103,7 @@ export class OrdersService {
         // 2. Crear la orden - Encabezado - Detalles
         const order = await tx.order.create({
           data: {
+            userId: createOrderDto.userId,
             paymentMethod:
               createOrderDto.paymentMethod ?? PaymentMethod.LIBELULA,
             totalAmount: totalAmount,
@@ -110,7 +111,6 @@ export class OrdersService {
             totalTax: totalTax,
             totalItems: totalItems,
             isOnlineSale: createOrderDto.isOnlineSale,
-
             OrderItem: {
               createMany: {
                 data: createOrderDto.items.map((item) => {
@@ -135,10 +135,17 @@ export class OrdersService {
         // 3. Crear la direccion de la orden
         // Address
 
+        const orderAddress = await tx.orderAddress.create({
+          data: {
+            orderId: order.id,
+            ...createOrderDto.address,
+          },
+        });
+
         return {
           updateProductVariants: updateProductVariants,
           order: order,
-          orderAddress: 'yes',
+          orderAddress: orderAddress,
         };
       });
 
@@ -161,6 +168,14 @@ export class OrdersService {
       this.prismaService.order.findMany({
         skip: (page - 1) * limit,
         take: limit,
+        include: {
+          User: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
       }),
     ]);
 
@@ -172,20 +187,97 @@ export class OrdersService {
         page: page,
         totalPages: totalPages,
       },
-      data: orders,
+      data: orders.map(({ User, ...rest }) => ({
+        ...rest,
+        user: { ...User },
+      })),
     };
   }
 
   async findOne(id: string) {
     const order = await this.prismaService.order.findUnique({
       where: { id: id },
+      include: {
+        User: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        OrderItem: {
+          select: {
+            id: true,
+            quantity: true,
+            price: true,
+            ProductVariant: {
+              select: {
+                id: true,
+                size: true,
+                color: true,
+                sku: true,
+                Product: {
+                  select: {
+                    id: true,
+                    title: true,
+                    price: true,
+                    salePrice: true,
+                    images: {
+                      select: {
+                        url: true,
+                      },
+                    },
+                    Category: {
+                      select: {
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        Coupon: {
+          select: {
+            id: true,
+            code: true,
+            discountType: true,
+            value: true,
+          },
+        },
+      },
     });
 
     if (!order) {
       throw new NotFoundException(`Order not found with id: ${id}`);
     }
 
-    return order;
+    // Transformar la respuesta para aplanar la estructura
+    const { OrderItem, User, ...orderData } = order;
+
+    const orderItems = OrderItem.map((item) => {
+      const { ProductVariant, ...itemData } = item;
+      const { Product, ...variantData } = ProductVariant;
+      const { Category, images, ...productData } = Product;
+
+      return {
+        ...itemData,
+        ...variantData,
+        ...productData,
+
+        category: Category.name,
+        images: images.map(({ url }) => url),
+      };
+    });
+
+    return {
+      ...orderData,
+      user: {
+        ...User,
+      },
+      orderItems,
+    };
   }
 
   update(id: string, updateOrderDto: UpdateOrderDto) {
@@ -194,6 +286,16 @@ export class OrdersService {
 
   remove(id: string) {
     return `This action removes a #${id} order`;
+  }
+
+  async findOrdersByUser(userId: string) {
+    const orders = await this.prismaService.order.findMany({
+      where: {
+        userId: userId,
+      },
+    });
+
+    return orders;
   }
 
   private async validatedProductVariantIds(ids: string[]) {

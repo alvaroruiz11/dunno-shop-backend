@@ -5,6 +5,7 @@ import {
   IsDefined,
   IsEnum,
   IsOptional,
+  IsString,
   ValidateNested,
 } from 'class-validator';
 import { OrderItemDto } from './order-item.dto';
@@ -31,4 +32,8 @@ export class CreateOrderDto {
   @ValidateNested()
   @Type(() => OrderAddressDto)
   address: OrderAddressDto;
+
+  @IsString()
+  @IsOptional()
+  userId?: string;
 }

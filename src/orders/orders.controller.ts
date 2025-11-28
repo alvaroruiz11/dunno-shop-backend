@@ -12,6 +12,9 @@ import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { OrdersPaginationDto } from './dto/orders-pagination.dto';
+import { Auth } from '../auth/decorators/auth.decorator';
+import { GetUser } from 'src/auth/decorators/get-user.decorator';
+import type { User } from 'generated/prisma';
 
 @Controller('orders')
 export class OrdersController {
@@ -40,5 +43,10 @@ export class OrdersController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.ordersService.remove(id);
+  }
+
+  @Get('/user/:userId')
+  findOrdersByUser(@Param('userId') userId: string) {
+    return this.ordersService.findOrdersByUser(userId);
   }
 }
