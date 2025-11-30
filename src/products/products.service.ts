@@ -59,6 +59,7 @@ export class ProductsService {
       limit = 10,
       category = '',
       gender,
+      active,
     } = productsPaginationDto;
 
     const categoriesIds = await this.getCategoryIdsBySlug(category);
@@ -69,6 +70,7 @@ export class ProductsService {
           categoryId: {
             in: categoriesIds,
           },
+          isActive: active === '0' ? false : active === '1' ? true : undefined,
           gender: gender ? gender : undefined,
         },
       }),
@@ -77,11 +79,13 @@ export class ProductsService {
           categoryId: {
             in: categoriesIds,
           },
+          isActive: active === '0' ? false : active === '1' ? true : undefined,
           gender: gender ? gender : undefined,
         },
         skip: (page - 1) * limit,
         take: limit,
         include: {
+          variants: true,
           Category: {
             select: {
               id: true,
@@ -251,9 +255,16 @@ export class ProductsService {
   }
 
   async remove(id: string) {
-    await this.findOne(id);
+    const product = await this.findOne(id);
 
-    return await this.prismaService.product.delete({ where: { id: id } });
+    if (!product.isActive) {
+      return product as Product;
+    }
+
+    return this.prismaService.product.update({
+      where: { id: id },
+      data: { isActive: false },
+    });
   }
 
   private async getCategoryIdsBySlug(

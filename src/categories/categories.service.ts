@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { CategoriesPaginationDto } from './dto/categories-pagination.dto';
 
 @Injectable()
 export class CategoriesService {
@@ -14,12 +14,19 @@ export class CategoriesService {
     });
   }
 
-  async findAll(paginationDto: PaginationDto) {
-    const { page = 1, limit = 20 } = paginationDto;
+  async findAll(categoriesPaginationDto: CategoriesPaginationDto) {
+    const { page = 1, limit = 20, active } = categoriesPaginationDto;
 
     const [count, categories] = await Promise.all([
-      this.prismaService.category.count(),
+      this.prismaService.category.count({
+        where: {
+          isActive: active === '0' ? false : active === '1' ? true : undefined,
+        },
+      }),
       this.prismaService.category.findMany({
+        where: {
+          isActive: active === '0' ? false : active === '1' ? true : undefined,
+        },
         skip: (page - 1) * limit,
         take: limit,
         include: {
@@ -58,7 +65,7 @@ export class CategoriesService {
     });
 
     if (!category) {
-      throw new NotFoundException(``);
+      throw new NotFoundException(`Not found category with ID: ${id}`);
     }
 
     return category;
@@ -78,8 +85,15 @@ export class CategoriesService {
   }
 
   async remove(id: string) {
-    await this.findOne(id);
+    const category = await this.findOne(id);
 
-    return await this.prismaService.category.delete({ where: { id: id } });
+    if (!category.isActive) {
+      return category;
+    }
+
+    return await this.prismaService.category.update({
+      where: { id: id },
+      data: { isActive: false },
+    });
   }
 }

@@ -12,7 +12,7 @@ import {
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
+import { CategoriesPaginationDto } from './dto/categories-pagination.dto';
 
 @Controller('categories')
 export class CategoriesController {
@@ -24,8 +24,8 @@ export class CategoriesController {
   }
 
   @Get()
-  findAll(@Query() paginationDto: PaginationDto) {
-    return this.categoriesService.findAll(paginationDto);
+  findAll(@Query() categoriesPaginationDto: CategoriesPaginationDto) {
+    return this.categoriesService.findAll(categoriesPaginationDto);
   }
 
   @Get(':id')
