@@ -9,6 +9,7 @@ import { OrdersModule } from './orders/orders.module';
 import { LocationsModule } from './locations/locations.module';
 import { UsersModule } from './users/users.module';
 import { AddressModule } from './address/address.module';
+import { PrinterModule } from './printer/printer.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AddressModule } from './address/address.module';
     ProductsModule,
     UsersModule,
     AddressModule,
+    PrinterModule,
   ],
   controllers: [],
   providers: [],

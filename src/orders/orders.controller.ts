@@ -1,3 +1,4 @@
+import type { Response } from 'express';
 import {
   Controller,
   Get,
@@ -7,6 +8,7 @@ import {
   Param,
   Delete,
   Query,
+  Res,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -47,5 +49,18 @@ export class OrdersController {
   @Get('/user/:userId')
   findOrdersByUser(@Param('userId') userId: string) {
     return this.ordersService.findOrdersByUser(userId);
+  }
+
+  @Get('invoice/:orderId')
+  async getOrderByIdInvoice(
+    @Param('orderId') orderId: string,
+    @Res() response: Response,
+  ) {
+    const pdfDoc = await this.ordersService.getOrderByIdInvoice(orderId);
+
+    response.setHeader('Content-Type', 'application/pdf');
+    pdfDoc.info.Title = 'Order-Report';
+    pdfDoc.pipe(response);
+    pdfDoc.end();
   }
 }

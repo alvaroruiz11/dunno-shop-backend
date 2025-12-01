@@ -7,13 +7,21 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { OrdersPaginationDto } from './dto/orders-pagination.dto';
-import { PaymentMethod, type User } from 'generated/prisma';
+import { DocumentType, PaymentMethod, type User } from 'generated/prisma';
+import { getOrderInvoiceReport } from 'src/reports/order-invoice/order-invoice.repot';
+import { PrinterService } from '../printer/printer.service';
+import { envs } from 'src/config';
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly printerService: PrinterService,
+  ) {}
 
   async create(createOrderDto: CreateOrderDto) {
+    const { address, invoice } = createOrderDto;
+
     // 1. Confirmar ids de las variantes de producto
     const productsVariantIds = createOrderDto.items.map(
       (item) => item.productVariantId,
@@ -138,22 +146,40 @@ export class OrdersService {
         const orderAddress = await tx.orderAddress.create({
           data: {
             orderId: order.id,
-            ...createOrderDto.address,
+            ...address,
           },
+        });
+
+        // 4. Crear registro de factura
+        const invoiceUrl = `${envs.hostApi}/orders/invoice/${order.id}`;
+        const orderInvoice = await tx.orderInvoice.create({
+          data: {
+            orderId: order.id,
+            documentType: invoice?.documentType ?? DocumentType.CI,
+            nitNumber: invoice?.nitNumber ?? address.ci,
+            socialReason:
+              invoice?.socialReason ??
+              `${address.firstName} ${address.lastName}`,
+            invoiceUrl: invoiceUrl,
+          },
+        });
+
+        const invoiceNumber = `FAC-${String(orderInvoice.seq).padStart(6, '0')}`;
+
+        const orderInvoiceUpdate = await tx.orderInvoice.update({
+          where: { id: orderInvoice.id },
+          data: { invoiceNumber: invoiceNumber },
         });
 
         return {
           updateProductVariants: updateProductVariants,
           order: order,
           orderAddress: orderAddress,
+          orderInvoice: orderInvoiceUpdate,
         };
       });
 
-      return {
-        ok: true,
-        order: prismaTx.order,
-        prismaTx: prismaTx,
-      };
+      return prismaTx.order;
     } catch (error) {
       console.log(error);
       throw new BadRequestException(`Error creating order ${error}`);
@@ -168,6 +194,9 @@ export class OrdersService {
       this.prismaService.order.findMany({
         skip: (page - 1) * limit,
         take: limit,
+        orderBy: {
+          createdAt: 'desc',
+        },
         include: {
           User: {
             select: {
@@ -238,6 +267,16 @@ export class OrdersService {
             },
           },
         },
+        OrderInvoice: {
+          select: {
+            id: true,
+            documentType: true,
+            invoiceNumber: true,
+            invoiceUrl: true,
+            socialReason: true,
+            nitNumber: true,
+          },
+        },
         Coupon: {
           select: {
             id: true,
@@ -254,7 +293,7 @@ export class OrdersService {
     }
 
     // Transformar la respuesta para aplanar la estructura
-    const { OrderItem, User, ...orderData } = order;
+    const { OrderItem, OrderInvoice, User, ...orderData } = order;
 
     const orderItems = OrderItem.map((item) => {
       const { ProductVariant, ...itemData } = item;
@@ -265,7 +304,6 @@ export class OrdersService {
         ...itemData,
         ...variantData,
         ...productData,
-
         category: Category.name,
         images: images.map(({ url }) => url),
       };
@@ -273,9 +311,8 @@ export class OrdersService {
 
     return {
       ...orderData,
-      user: {
-        ...User,
-      },
+      user: User,
+      invoice: OrderInvoice,
       orderItems,
     };
   }
@@ -296,6 +333,14 @@ export class OrdersService {
     });
 
     return orders;
+  }
+
+  async getOrderByIdInvoice(orderId: string) {
+    const order = await this.findOne(orderId);
+
+    const docDefinition = getOrderInvoiceReport(order as any);
+    const doc = this.printerService.createPdf(docDefinition);
+    return doc;
   }
 
   private async validatedProductVariantIds(ids: string[]) {

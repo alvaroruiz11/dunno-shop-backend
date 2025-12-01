@@ -317,6 +317,8 @@ model OrderAddress {
 model OrderInvoice {
   id            String       @id @default(uuid())
   documentType  DocumentType @map("document_type")
+  seq           Int          @default(autoincrement())
+  
   nitNumber     String?      @db.VarChar(15)
   socialReason  String?      @map("social_reason") @db.VarChar(100)
   invoiceNumber String?      @unique @map("invoice_number")

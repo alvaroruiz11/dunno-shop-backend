@@ -12,6 +12,7 @@ import { OrderItemDto } from './order-item.dto';
 import { Type } from 'class-transformer';
 import { PaymentMethod } from 'generated/prisma';
 import { OrderAddressDto } from './order-address.dto';
+import { OrderInvoiceDto } from './order-invoice.dto';
 
 export class CreateOrderDto {
   @IsEnum(PaymentMethod)
@@ -36,4 +37,9 @@ export class CreateOrderDto {
   @IsString()
   @IsOptional()
   userId?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => OrderInvoiceDto)
+  invoice?: OrderInvoiceDto;
 }
