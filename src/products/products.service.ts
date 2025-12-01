@@ -60,6 +60,7 @@ export class ProductsService {
       category = '',
       gender,
       active,
+      q: query,
     } = productsPaginationDto;
 
     const categoriesIds = await this.getCategoryIdsBySlug(category);
@@ -72,6 +73,10 @@ export class ProductsService {
           },
           isActive: active === '0' ? false : active === '1' ? true : undefined,
           gender: gender ? gender : undefined,
+          title: {
+            contains: query,
+            mode: 'insensitive',
+          },
         },
       }),
       this.prismaService.product.findMany({
@@ -81,6 +86,10 @@ export class ProductsService {
           },
           isActive: active === '0' ? false : active === '1' ? true : undefined,
           gender: gender ? gender : undefined,
+          title: {
+            contains: query,
+            mode: 'insensitive',
+          },
         },
         skip: (page - 1) * limit,
         take: limit,
