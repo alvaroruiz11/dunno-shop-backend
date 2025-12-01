@@ -21,11 +21,13 @@ export class CategoriesService {
       this.prismaService.category.count({
         where: {
           isActive: active === '0' ? false : active === '1' ? true : undefined,
+          parentId: null,
         },
       }),
       this.prismaService.category.findMany({
         where: {
           isActive: active === '0' ? false : active === '1' ? true : undefined,
+          parentId: null,
         },
         skip: (page - 1) * limit,
         take: limit,
@@ -57,6 +59,22 @@ export class CategoriesService {
       },
       data: categories.map(({ parentId, ...rest }) => ({ ...rest })),
     };
+  }
+
+  async findNavigationCategories() {
+    const categories = await this.prismaService.category.findMany({
+      where: { parentId: null, isActive: true },
+      include: {
+        subCategories: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+      },
+    });
+    return categories.map(({ parentId, ...rest }) => ({ ...rest }));
   }
 
   async findOne(id: string) {

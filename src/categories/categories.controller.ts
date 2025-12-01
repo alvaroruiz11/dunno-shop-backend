@@ -27,6 +27,10 @@ export class CategoriesController {
   findAll(@Query() categoriesPaginationDto: CategoriesPaginationDto) {
     return this.categoriesService.findAll(categoriesPaginationDto);
   }
+  @Get('navigation')
+  findNavigationCategories() {
+    return this.categoriesService.findNavigationCategories();
+  }
 
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
