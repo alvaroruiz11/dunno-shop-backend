@@ -14,6 +14,7 @@ export const GetUser = createParamDecorator(
       throw new InternalServerErrorException(`User not found`);
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return data ? user[data] : user;
   },
 );

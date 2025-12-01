@@ -15,6 +15,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { OrdersPaginationDto } from './dto/orders-pagination.dto';
 import { Auth } from 'src/auth/decorators/auth.decorator';
+import { GetUser } from 'src/auth/decorators/get-user.decorator';
 
 @Controller('orders')
 export class OrdersController {
@@ -25,6 +26,7 @@ export class OrdersController {
     return this.ordersService.create(createOrderDto);
   }
 
+  @Auth()
   @Get()
   findAll(@Query() ordersPaginationDto: OrdersPaginationDto) {
     return this.ordersService.findAll(ordersPaginationDto);
@@ -35,19 +37,21 @@ export class OrdersController {
     return this.ordersService.findOne(id);
   }
 
+  @Auth()
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
     return this.ordersService.update(id, updateOrderDto);
   }
 
+  @Auth()
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.ordersService.remove(id);
   }
 
   @Auth()
-  @Get('/user/:userId')
-  findOrdersByUser(@Param('userId') userId: string) {
+  @Get('/by-user')
+  findOrdersByUser(@GetUser('id') userId: string) {
     return this.ordersService.findOrdersByUser(userId);
   }
 
